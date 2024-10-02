@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personagens de Rick e Morty</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Link para o arquivo CSS externo -->
+</head>
+<body>
+    <h1>Personagens de Rick and Morty</h1>
+    <input type="text" id="searchInput" class="search-bar" placeholder="Buscar por um personagem..." />
+    
+    <div class="filters">
+        <select id="statusFilter">
+            <option value="">Todos os Status</option>
+            <option value="Alive">Vivos</option>
+            <option value="Dead">Mortos</option>
+            <option value="unknown">Desconhecidos</option>
+        </select>
+        <select id="speciesFilter">
+            <option value="">Todas as Espécies</option>
+            <option value="Human">Humanos</option>
+            <option value="Alien">Alienígenas</option>
+            <option value="Robot">Robôs</option>
+        </select>
+        <button id="favoriteFilter">Favoritos</button>
+    </div>
+
+    <div class="character-grid" id="characterGrid"></div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
