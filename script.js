@@ -1,17 +1,13 @@
 const characterGrid = document.getElementById('characterGrid');
 const searchInput = document.getElementById('searchInput');
-const statusFilter = document.getElementById('statusFilter');
-const speciesFilter = document.getElementById('speciesFilter');
 const favoriteFilterButton = document.getElementById('favoriteFilter');
+const speciesFilter = document.getElementById('speciesFilter');
+const statusFilter = document.getElementById('statusFilter');
 
 let currentPage = 1;   
 let isLoading = false;  
 let favorites = JSON.parse(localStorage.getItem('favorites')) || []; 
-
-const translations = {
-    status: { "Alive": "Vivo", "Dead": "Morto", "unknown": "Desconhecido" },
-    species: { "Human": "Humano", "Alien": "Alienígena", "Robot": "Robô" }
-};
+let showFavoritesOnly = false;
 
 function saveFavorites() {
     localStorage.setItem('favorites', JSON.stringify(favorites));
@@ -28,27 +24,51 @@ function toggleFavorite(id) {
     renderCharacters(); 
 }
 
+function translateSpecies(species) {
+    const speciesTranslation = {
+        "Human": "Humano",
+        "Alien": "Alienígena",
+        // Adicione mais traduções de espécies conforme necessário
+    };
+    return speciesTranslation[species] || species; // Retorna a tradução ou a espécie original
+}
+
+function translateStatus(status) {
+    const statusTranslation = {
+        "Alive": "Vivo",
+        "Dead": "Morto",
+        "unknown": "Desconhecido"
+    };
+    return statusTranslation[status] || status; // Retorna a tradução ou o status original
+}
+
 function createCharacterCard(character) {
     const characterCard = document.createElement('div'); 
     characterCard.classList.add('character-card'); 
 
     const favoriteClass = favorites.includes(character.id) ? 'favorited' : '';
-    const translatedStatus = translations.status[character.status] || character.status; 
-    const translatedSpecies = translations.species[character.species] || character.species; 
 
     characterCard.innerHTML = `
         <img src="${character.image}" alt="${character.name}">
         <h3>${character.name}</h3>
         <span class="favorite ${favoriteClass}" data-id="${character.id}">★</span>
         <div class="character-details">
-            <p>Status: ${translatedStatus}</p>
-            <p>Espécie: ${translatedSpecies}</p>
+            <p>Status: ${translateStatus(character.status)}</p>
+            <p>Espécie: ${translateSpecies(character.species)}</p>
         </div>
     `;
 
     characterCard.querySelector('.favorite').onclick = () => toggleFavorite(character.id);
     
     characterGrid.appendChild(characterCard); 
+}
+
+function fetchCharacterById(id) {
+    return fetch(`https://rickandmortyapi.com/api/character/${id}`)
+        .then(response => response.json())
+        .catch(error => {
+            console.log('Erro ao buscar personagem:', error);
+        });
 }
 
 function fetchCharacters(page) {
@@ -80,32 +100,49 @@ function fetchSearchedCharacters(query) {
         });
 }
 
-function renderFilteredCharacters() {
+async function renderFilteredCharacters() {
     characterGrid.innerHTML = ''; 
-    const status = statusFilter.value;
-    const species = speciesFilter.value;
+    const filteredFavorites = await Promise.all(favorites.map(fetchCharacterById));
 
-    const filteredFavorites = favorites.map(id => {
-        return fetch(`https://rickandmortyapi.com/api/character/${id}`)
-            .then(response => response.json())
-            .then(character => {
-                if ((!status || character.status === status) && (!species || character.species === species)) {
-                    createCharacterCard(character);
-                }
-            });
-    });
-
-    Promise.all(filteredFavorites).then(() => {
-        // Renderização completa após todos os personagens serem filtrados
+    // Renderiza os favoritos
+    filteredFavorites.forEach(character => {
+        createCharacterCard(character);
     });
 }
 
+function renderCharacters() {
+    characterGrid.innerHTML = ''; 
+    if (showFavoritesOnly) {
+        renderFilteredCharacters(); // Renderiza apenas favoritos
+    } else {
+        fetchCharacters(currentPage); // Renderiza todos os personagens
+    }
+}
+
+// Pesquisa
 searchInput.addEventListener('input', (e) => {
     const query = e.target.value.trim(); 
     characterGrid.innerHTML = ''; 
-    query.length ? fetchSearchedCharacters(query) : fetchCharacters(currentPage); 
+    query.length ? fetchSearchedCharacters(query) : renderCharacters(); 
 });
 
+// Botão de filtro de favoritos
+favoriteFilterButton.addEventListener('click', () => {
+    showFavoritesOnly = !showFavoritesOnly; // Alterna entre mostrar favoritos e todos
+    favoriteFilterButton.textContent = showFavoritesOnly ? 'Mostrar Todos' : 'Mostrar Favoritos';
+    renderCharacters();
+});
+
+// Filtros de espécies e status
+speciesFilter.addEventListener('change', () => {
+    renderCharacters();
+});
+
+statusFilter.addEventListener('change', () => {
+    renderCharacters();
+});
+
+// Rolagem infinita
 window.addEventListener('scroll', () => {
     if (window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 100 && !isLoading) {
         currentPage++; 
@@ -113,14 +150,5 @@ window.addEventListener('scroll', () => {
     }
 });
 
-favoriteFilterButton.addEventListener('click', () => {
-    characterGrid.innerHTML = ''; 
-    renderFilteredCharacters();
-});
-
-function renderCharacters() {
-    characterGrid.innerHTML = ''; 
-    fetchCharacters(currentPage); 
-}
-
-fetchCharacters(currentPage);
+// Inicializa a exibição de personagens
+renderCharacters();
